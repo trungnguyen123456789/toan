@@ -344,9 +344,21 @@
         </div>
     </div>
    <script type="module">
+    window.leaveToMenu = async function(e) {
+            e.preventDefault();
+            if (auth.currentUser) {
+                try {
+                    // Đổi trạng thái về Sảnh trước khi thoát
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { 
+                        currentActivity: 'Đang ở Sảnh' 
+                    });
+                } catch(err) {}
+            }
+            window.location.href = "https://trungnguyen123456789.github.io/menu/";
+        };
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCgHsMyb5BFISSrvEBvf1vk3uHbN0jilDc",
@@ -363,14 +375,31 @@
         const db = getFirestore(app);
 
         // KHAI BÁO BIẾN ĐẦY ĐỦ Ở ĐÂY (LỖI 1 ĐÃ SỬA: BỔ SUNG currentFacts)
-        let currentGold = 0; 
+      let currentGold = 0; 
         let currentAnswerKey = { part1: [], part2: [], part3: [] };
         let loadingTimerInterval, loadingStartTime, isExamSubmitted = false;
         let currentFacts = []; 
-        let userData = null; // Thêm userData để dùng trong hàm buyItem
-        
+        let userData = null;
+
+        // --- HỆ THỐNG TRẠNG THÁI (ĐỊNH VỊ) ---
+        async function updateMathPresence(uid) {
+            if (!uid) return;
+            try { 
+                await updateDoc(doc(db, "users", uid), { 
+                    lastOnline: serverTimestamp(), // Giữ cho nick luôn Online
+                    currentActivity: 'Đang cày Toán Học' // Khẳng định đang ở phòng Toán
+                }); 
+            } catch (e) {}
+        }
+
+        // Cứ 2 phút báo cáo máy chủ 1 lần để không bị văng Offline
+        setInterval(() => { if (auth.currentUser) updateMathPresence(auth.currentUser.uid); }, 120000);
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                // Vừa tải trang Toán là cập nhật định vị liền!
+                updateMathPresence(user.uid);
+
                 onSnapshot(doc(db, "users", user.uid), (docSnap) => {
                     if (docSnap.exists()) {
                         userData = docSnap.data();
@@ -2220,14 +2249,14 @@ p2_selected.push(p2_prob.pop()); // Đẩy vào p2_selected và bỏ cặp ngo�
             return { html: html, key: key };
         }
     </script>
-    <a href="https://trungnguyen123456789.github.io/menu/" 
-   style="position: fixed; bottom: 20px; left: 20px; z-index: 999; 
-          background: var(--accent); color: var(--bg-color); 
-          padding: 10px 20px; border-radius: 30px; 
-          text-decoration: none; font-weight: bold; 
-          box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-          display: flex; align-items: center; gap: 8px;">
-   🏠 Trở về Menu
-</a>
+    <a href="#" onclick="return leaveToMenu(event)" 
+       style="position: fixed; bottom: 20px; left: 20px; z-index: 999; 
+              background: var(--accent); color: var(--bg-color); 
+              padding: 10px 20px; border-radius: 30px; 
+              text-decoration: none; font-weight: bold; 
+              box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+              display: flex; align-items: center; gap: 8px;">
+    🏠 Trở về Menu
+    </a>
 </body>
 </html>
